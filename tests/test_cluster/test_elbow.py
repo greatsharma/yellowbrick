@@ -23,7 +23,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from scipy.sparse import csc_matrix, csr_matrix
-from numpy.testing.utils import assert_array_almost_equal
+from numpy.testing import assert_array_almost_equal
 
 from sklearn.datasets import make_blobs
 from sklearn.cluster import KMeans, MiniBatchKMeans
@@ -328,7 +328,7 @@ class TestKElbowVisualizer(VisualTestCase):
         visualizer.fit(X)
         assert len(visualizer.k_scores_) == 5
         assert visualizer.elbow_value_ == 3
-        expected = np.array([4286.5, 12463.4, 8763.8, 6939.3, 5858.8])
+        expected = np.array([4286.5, 12463.4, 8763.3, 6938.2, 5858.4])
 
         visualizer.finalize()
         self.assert_images_similar(visualizer, tol=0.5, windows_tol=2.2)

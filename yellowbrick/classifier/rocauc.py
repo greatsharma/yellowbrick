@@ -21,7 +21,6 @@ Implements visual ROC/AUC curves for classification evaluation.
 
 import numpy as np
 
-from scipy import interp
 from sklearn.metrics import auc, roc_curve
 from sklearn.preprocessing import label_binarize
 from sklearn.utils.multiclass import type_of_target
@@ -208,7 +207,7 @@ class ROCAUC(ClassificationScoreVisualizer):
 
         # Set the visual parameters for ROCAUC
         # NOTE: the binary flag breaks our API since it's really just a meta parameter
-        # for micro, macro, and per_class. We knew this going into it, but did it anyway.
+        # for micro, macro, and per_class. We knew this going in, but did it anyway.
         if binary:
             self.set_params(micro=False, macro=False, per_class=False)
         else:
@@ -261,10 +260,11 @@ class ROCAUC(ClassificationScoreVisualizer):
         y_pred = self._get_y_scores(X)
 
         if self.target_type_ == BINARY:
-            # If it's binary classification, to draw micro or macro curves per_class must be True
+            # For binary, per_class must be True to draw micro/macro curves
             if (self.micro or self.macro) and not self.per_class:
                 raise ModelError(
-                    "no curves will be drawn; set per_class=True or micro=False and macro=False."
+                    "no curves will be drawn; ",
+                    "set per_class=True or micro=False and macro=False.",
                 )
         if self.target_type_ == MULTICLASS:
             # If it's multiclass classification, at least one of micro, macro, or
@@ -284,12 +284,12 @@ class ROCAUC(ClassificationScoreVisualizer):
         self.tpr = dict()
         self.roc_auc = dict()
 
-        # If the decision is binary draw only ROC curve for the postitive class
+        # If the decision is binary draw only ROC curve for the positive class
         if self.target_type_ is BINARY and not self.per_class:
             # In this case predict_proba returns an array of shape (n, 2) which
             # specifies the probabilities of both the negative and positive classes.
             if len(y_pred.shape) == 2 and y_pred.shape[1] == 2:
-                self.fpr[BINARY], self.tpr[BINARY], _ = roc_curve(y, y_pred[:,1])
+                self.fpr[BINARY], self.tpr[BINARY], _ = roc_curve(y, y_pred[:, 1])
             else:
                 # decision_function returns array of shape (n,), so plot it directly
                 self.fpr[BINARY], self.tpr[BINARY], _ = roc_curve(y, y_pred)
@@ -301,7 +301,7 @@ class ROCAUC(ClassificationScoreVisualizer):
             if len(y_pred.shape) == 2 and y_pred.shape[1] == 2:
                 # predict_proba returns array of shape (n, 2), so use
                 # probability of class 1 to compute ROC
-                self.fpr[1], self.tpr[1], _ = roc_curve(y, y_pred[:,1])
+                self.fpr[1], self.tpr[1], _ = roc_curve(y, y_pred[:, 1])
             else:
                 # decision_function returns array of shape (n,)
                 self.fpr[1], self.tpr[1], _ = roc_curve(y, y_pred)
@@ -311,12 +311,12 @@ class ROCAUC(ClassificationScoreVisualizer):
             if len(y_pred.shape) == 2 and y_pred.shape[1] == 2:
                 # predict_proba returns array of shape (n, 2), so use
                 # probability of class 0 to compute ROC
-                self.fpr[0], self.tpr[0], _ = roc_curve(1-y, y_pred[:,0])
+                self.fpr[0], self.tpr[0], _ = roc_curve(1 - y, y_pred[:, 0])
             else:
                 # decision_function returns array of shape (n,).
                 # To draw a ROC curve for class 0 we swap the classes 0 and 1 in y
                 # and reverse classifiers predictions y_pred.
-                self.fpr[0], self.tpr[0], _ = roc_curve(1-y, -y_pred)
+                self.fpr[0], self.tpr[0], _ = roc_curve(1 - y, -y_pred)
             self.roc_auc[0] = auc(self.fpr[0], self.tpr[0])
 
         else:
@@ -324,7 +324,6 @@ class ROCAUC(ClassificationScoreVisualizer):
             for i, c in enumerate(classes):
                 self.fpr[i], self.tpr[i], _ = roc_curve(y, y_pred[:, i], pos_label=c)
                 self.roc_auc[i] = auc(self.fpr[i], self.tpr[i])
-
 
         # Compute micro average
         if self.micro:
@@ -356,7 +355,7 @@ class ROCAUC(ClassificationScoreVisualizer):
         -------
         ax : the axis with the plotted figure
         """
-        colors = self.colors[0 : len(self.classes_)]
+        colors = self.class_colors_[0 : len(self.classes_)]
         n_classes = len(colors)
 
         # If it's a binary decision, plot the single ROC curve
@@ -364,7 +363,9 @@ class ROCAUC(ClassificationScoreVisualizer):
             self.ax.plot(
                 self.fpr[BINARY],
                 self.tpr[BINARY],
-                label="ROC for binary decision, AUC = {:0.2f}".format(self.roc_auc[BINARY]),
+                label="ROC for binary decision, AUC = {:0.2f}".format(
+                    self.roc_auc[BINARY]
+                ),
             )
 
         # If per-class plotting is requested, plot ROC curves for each class
@@ -385,7 +386,7 @@ class ROCAUC(ClassificationScoreVisualizer):
                 self.fpr[MICRO],
                 self.tpr[MICRO],
                 linestyle="--",
-                color=self.colors[len(self.classes_) - 1],
+                color=self.class_colors_[len(self.classes_) - 1],
                 label="micro-average ROC curve, AUC = {:0.2f}".format(
                     self.roc_auc["micro"]
                 ),
@@ -397,7 +398,7 @@ class ROCAUC(ClassificationScoreVisualizer):
                 self.fpr[MACRO],
                 self.tpr[MACRO],
                 linestyle="--",
-                color=self.colors[len(self.classes_) - 1],
+                color=self.class_colors_[len(self.classes_) - 1],
                 label="macro-average ROC curve, AUC = {:0.2f}".format(
                     self.roc_auc["macro"]
                 ),
@@ -429,7 +430,7 @@ class ROCAUC(ClassificationScoreVisualizer):
         self.ax.set_ylim([0.0, 1.0])
 
         # Set x and y axis labels
-        self.ax.set_ylabel("True Postive Rate")
+        self.ax.set_ylabel("True Positive Rate")
         self.ax.set_xlabel("False Positive Rate")
 
     def _get_y_scores(self, X):
@@ -495,7 +496,7 @@ class ROCAUC(ClassificationScoreVisualizer):
 
         # Compute the averages per class
         for i in range(n_classes):
-            avg_tpr += interp(all_fpr, self.fpr[i], self.tpr[i])
+            avg_tpr += np.interp(all_fpr, self.fpr[i], self.tpr[i])
 
         # Finalize the average
         avg_tpr /= n_classes
@@ -562,7 +563,7 @@ def roc_auc(
 
     y_train : array-like, 2D
         The vector of target data or the dependent variable predicted by X. Used to fit
-        the visualizer and also to score the visualizer if test splits are not specified.
+        the visualizer and also to score the visualizer if test splits not specified.
 
     X_test: array-like, 2D, default: None
         The table of instance data or independent variables that describe the outcome of
@@ -693,11 +694,12 @@ def roc_auc(
     # Fit and transform the visualizer (calls draw)
     visualizer.fit(X_train, y_train, **kwargs)
 
-    #Scores the visualizer with X_test and y_test if provided, X_train, y_train if not provided
+    # Scores the visualizer with X_test and y_test if provided,
+    # X_train, y_train if not provided
     if X_test is not None and y_test is not None:
         visualizer.score(X_test, y_test)
     else:
-        visualizer.score(X_train,  y_train)
+        visualizer.score(X_train, y_train)
 
     if show:
         visualizer.show()

@@ -21,7 +21,7 @@ Shows the balance of classes and their associated predictions.
 import numpy as np
 
 from sklearn.utils.multiclass import unique_labels
-from sklearn.metrics.classification import _check_targets
+from sklearn.metrics._classification import _check_targets
 
 from yellowbrick.draw import bar_stack
 from yellowbrick.classifier.base import ClassificationScoreVisualizer
@@ -199,7 +199,7 @@ class ClassPredictionError(ClassificationScoreVisualizer):
             self.ax,
             labels=list(self.classes_),
             ticks=self.classes_,
-            colors=self.colors,
+            colors=self.class_colors_,
             legend_kws=legend_kws,
         )
         return self.ax
@@ -229,6 +229,7 @@ class ClassPredictionError(ClassificationScoreVisualizer):
 
         # Ensure the legend fits on the figure
         self.fig.tight_layout(rect=[0, 0, 0.90, 1])
+
 
 ##########################################################################
 ## Quick Method
